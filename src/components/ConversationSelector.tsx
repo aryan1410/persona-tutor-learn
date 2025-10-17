@@ -36,11 +36,11 @@ export function ConversationSelector({ open, onOpenChange, subject }: Conversati
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get subject ID
+      // Get subject ID (case-insensitive)
       const { data: subjectData } = await supabase
         .from('subjects')
         .select('id')
-        .eq('name', subject)
+        .ilike('name', subject)
         .single();
 
       if (!subjectData) return;
