@@ -10,10 +10,12 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const UploadTextbookDialog = ({ 
   open, 
-  onOpenChange 
+  onOpenChange,
+  onSuccess
 }: { 
   open: boolean; 
   onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
 }) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -96,6 +98,7 @@ export const UploadTextbookDialog = ({
       setTitle("");
       setSubject("");
       setFile(null);
+      onSuccess?.();
     } catch (error: any) {
       console.error('Upload error:', error);
       toast({

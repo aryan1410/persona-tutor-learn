@@ -5,12 +5,14 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { BookOpen, MapPin, LogOut, Upload, Trophy, BarChart } from "lucide-react";
 import { UploadTextbookDialog } from "@/components/UploadTextbookDialog";
+import { TextbooksList } from "@/components/TextbooksList";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     checkUser();
@@ -148,7 +150,7 @@ const Dashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div>
+        <div className="mb-12">
           <h3 className="text-2xl font-bold mb-6">Quick Actions</h3>
           <div className="grid md:grid-cols-3 gap-6 max-w-4xl">
             {quickActions.map((action, index) => (
@@ -165,11 +167,20 @@ const Dashboard = () => {
             ))}
           </div>
         </div>
+
+        {/* My Textbooks */}
+        <div>
+          <h3 className="text-2xl font-bold mb-6">My Textbooks</h3>
+          <div className="max-w-4xl">
+            <TextbooksList key={refreshKey} />
+          </div>
+        </div>
       </div>
 
       <UploadTextbookDialog 
         open={uploadDialogOpen}
         onOpenChange={setUploadDialogOpen}
+        onSuccess={() => setRefreshKey(prev => prev + 1)}
       />
     </div>
   );
