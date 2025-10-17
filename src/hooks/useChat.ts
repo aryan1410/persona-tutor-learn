@@ -33,6 +33,9 @@ export const useChat = (subject: string, conversationId: string | null, userId: 
         content: msg.content,
       }));
 
+      // Get selected textbook from localStorage
+      const selectedTextbookId = localStorage.getItem("selectedTextbookId");
+
       const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
       
       const response = await fetch(CHAT_URL, {
@@ -47,6 +50,8 @@ export const useChat = (subject: string, conversationId: string | null, userId: 
           subject,
           userId,
           userProfile,
+          conversationId,
+          textbookId: selectedTextbookId || null,
         }),
       });
 

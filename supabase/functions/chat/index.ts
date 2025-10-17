@@ -13,9 +13,9 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, persona, subject, userId, conversationId } = await req.json();
+    const { messages, persona, subject, userId, conversationId, textbookId } = await req.json();
     
-    console.log('Chat request:', { persona, subject, userId, messagesCount: messages.length });
+    console.log('Chat request:', { persona, subject, userId, textbookId, messagesCount: messages.length });
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -44,38 +44,64 @@ serve(async (req) => {
 
     console.log('Feedback loaded:', feedback?.length || 0, 'items');
 
-    // Get user's textbooks for this subject to provide context
-    const { data: subjectData } = await supabase
-      .from('subjects')
-      .select('id')
-      .eq('name', subject)
-      .single();
-
+    // Get textbook context if a textbook is selected
     let textbookContext = '';
-    if (subjectData) {
-      const { data: textbooks } = await supabase
+    
+    if (textbookId) {
+      // Use the specifically selected textbook
+      const { data: textbook } = await supabase
         .from('textbooks')
         .select('id, title')
+        .eq('id', textbookId)
         .eq('user_id', userId)
-        .eq('subject_id', subjectData.id);
+        .single();
 
-      if (textbooks && textbooks.length > 0) {
-        // Get relevant chunks based on last user message
-        const lastMessage = messages[messages.length - 1].content.toLowerCase();
-        
-        // Simple keyword search across all textbook chunks
+      if (textbook) {
+        // Get relevant chunks from this textbook
         const { data: relevantChunks } = await supabase
           .from('textbook_chunks')
           .select('content, textbooks!inner(title)')
-          .in('textbook_id', textbooks.map(t => t.id))
+          .eq('textbook_id', textbook.id)
           .limit(5);
 
         if (relevantChunks && relevantChunks.length > 0) {
-          textbookContext = '\n\n--- Reference Material from Uploaded Textbooks ---\n';
+          textbookContext = `\n\n--- Reference Material from "${textbook.title}" ---\n`;
           relevantChunks.forEach((chunk: any) => {
-            textbookContext += `\nFrom "${chunk.textbooks.title}":\n${chunk.content}\n`;
+            textbookContext += `\n${chunk.content}\n`;
           });
-          console.log('Added textbook context, chunks:', relevantChunks.length);
+          console.log('Added textbook context from selected textbook:', textbook.title, ', chunks:', relevantChunks.length);
+        }
+      }
+    } else {
+      // Fallback: Get user's textbooks for this subject
+      const { data: subjectData } = await supabase
+        .from('subjects')
+        .select('id')
+        .eq('name', subject)
+        .single();
+
+      if (subjectData) {
+        const { data: textbooks } = await supabase
+          .from('textbooks')
+          .select('id, title')
+          .eq('user_id', userId)
+          .eq('subject_id', subjectData.id);
+
+        if (textbooks && textbooks.length > 0) {
+          // Get relevant chunks from all textbooks
+          const { data: relevantChunks } = await supabase
+            .from('textbook_chunks')
+            .select('content, textbooks!inner(title)')
+            .in('textbook_id', textbooks.map(t => t.id))
+            .limit(5);
+
+          if (relevantChunks && relevantChunks.length > 0) {
+            textbookContext = '\n\n--- Reference Material from Uploaded Textbooks ---\n';
+            relevantChunks.forEach((chunk: any) => {
+              textbookContext += `\nFrom "${chunk.textbooks.title}":\n${chunk.content}\n`;
+            });
+            console.log('Added textbook context from all textbooks, chunks:', relevantChunks.length);
+          }
         }
       }
     }
