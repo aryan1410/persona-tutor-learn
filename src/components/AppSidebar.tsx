@@ -1,4 +1,4 @@
-import { Home, BookOpen, MapPin, LogOut } from "lucide-react";
+import { Home, User, CreditCard, LogOut, Trash2 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -15,10 +15,36 @@ export function AppSidebar() {
     navigate("/");
   };
 
+  const handleDeleteAccount = async () => {
+    if (window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          // Delete user data from profiles table
+          await supabase.from("profiles").delete().eq("id", user.id);
+          
+          toast({
+            title: "Account deleted successfully",
+            description: "Your account and all associated data have been removed.",
+          });
+          
+          await supabase.auth.signOut();
+          navigate("/");
+        }
+      } catch (error) {
+        toast({
+          title: "Error deleting account",
+          description: "Please try again or contact support.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   const navItems = [
     { title: "Dashboard", url: "/dashboard", icon: Home },
-    { title: "History", url: "/chat/history", icon: BookOpen, isNew: true },
-    { title: "Geography", url: "/chat/geography", icon: MapPin, isNew: true },
+    { title: "Profile", url: "/profile", icon: User },
+    { title: "Billing Information", url: "/billing", icon: CreditCard },
   ];
 
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
@@ -44,12 +70,6 @@ export function AppSidebar() {
             to={item.url}
             end={item.url === "/dashboard"}
             className={getNavCls}
-            onClick={(e) => {
-              if (item.isNew) {
-                e.preventDefault();
-                navigate(item.url, { state: { newChat: true } });
-              }
-            }}
           >
             <item.icon className="w-5 h-5" />
             <span>{item.title}</span>
@@ -57,14 +77,21 @@ export function AppSidebar() {
         ))}
       </nav>
 
-      {/* Logout */}
-      <div className="p-4 border-t border-sidebar-border">
+      {/* Logout & Delete Account */}
+      <div className="p-4 border-t border-sidebar-border space-y-2">
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-4 py-3 rounded-lg w-full text-sidebar-foreground hover:bg-sidebar-accent/50 transition-smooth"
         >
           <LogOut className="w-5 h-5" />
           <span>Logout</span>
+        </button>
+        <button
+          onClick={handleDeleteAccount}
+          className="flex items-center gap-3 px-4 py-3 rounded-lg w-full text-destructive hover:bg-destructive/10 transition-smooth"
+        >
+          <Trash2 className="w-5 h-5" />
+          <span>Delete Account</span>
         </button>
       </div>
     </aside>
