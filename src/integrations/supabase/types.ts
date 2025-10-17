@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      conversation_feedback: {
+        Row: {
+          comments: string | null
+          conversation_id: string
+          created_at: string
+          feedback_type: string
+          feedback_value: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          comments?: string | null
+          conversation_id: string
+          created_at?: string
+          feedback_type: string
+          feedback_value: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          comments?: string | null
+          conversation_id?: string
+          created_at?: string
+          feedback_type?: string
+          feedback_value?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_feedback_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           created_at: string

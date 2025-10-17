@@ -35,6 +35,15 @@ serve(async (req) => {
 
     console.log('User profile loaded:', profile);
 
+    // Get feedback for this conversation to adjust persona
+    const { data: feedback } = await supabase
+      .from('conversation_feedback')
+      .select('feedback_type, feedback_value')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: false });
+
+    console.log('Feedback loaded:', feedback?.length || 0, 'items');
+
     // Get user's textbooks for this subject to provide context
     const { data: subjectData } = await supabase
       .from('subjects')
@@ -71,11 +80,46 @@ serve(async (req) => {
       }
     }
 
-    // Build system prompt based on persona
+    // Analyze feedback to adjust persona
+    let genzIntensity: 'high' | 'moderate' | 'low' | 'none' = persona === 'genz' ? 'moderate' : 'none';
+    let personalIntensity: 'high' | 'moderate' | 'low' | 'none' = persona === 'personal' ? 'moderate' : 'none';
+    let strictTextbookMode = false;
+
+    if (feedback && feedback.length > 0) {
+      const personaFeedbacks = feedback.filter(f => f.feedback_type === 'persona');
+      const accuracyFeedbacks = feedback.filter(f => f.feedback_type === 'accuracy');
+
+      // Adjust Gen-Z intensity
+      const moreGenz = personaFeedbacks.filter(f => f.feedback_value === 'more_genz').length;
+      const lessGenz = personaFeedbacks.filter(f => f.feedback_value === 'less_genz').length;
+      if (moreGenz > lessGenz && persona === 'genz') genzIntensity = 'high';
+      if (lessGenz > moreGenz && persona === 'genz') genzIntensity = 'low';
+
+      // Adjust personalization intensity
+      const morePersonal = personaFeedbacks.filter(f => f.feedback_value === 'more_personal').length;
+      const lessPersonal = personaFeedbacks.filter(f => f.feedback_value === 'less_personal').length;
+      if (morePersonal > lessPersonal && persona === 'personal') personalIntensity = 'high';
+      if (lessPersonal > morePersonal && persona === 'personal') personalIntensity = 'low';
+
+      // Check if content accuracy is an issue
+      if (accuracyFeedbacks.length > 0) {
+        strictTextbookMode = true;
+        console.log('Strict textbook mode enabled due to accuracy feedback');
+      }
+    }
+
+    // Build system prompt based on persona and feedback
     let systemPrompt = '';
     
     if (persona === 'genz') {
-      systemPrompt = `You are a fun, relatable Gen-Z tutor teaching ${subject}. Use casual language, metaphors, and make learning feel like chatting with a friend. Keep it factual but engaging. Use expressions like "no cap", "lowkey", "vibes", but don't overdo it.
+      const genzStyles = {
+        high: 'Use Gen-Z slang heavily and frequently. Be super casual with expressions like "no cap", "lowkey", "highkey", "vibes", "fr fr", "slaps", "bussin". Make it feel like texting a friend.',
+        moderate: 'Use casual language and Gen-Z expressions naturally. Include terms like "no cap", "lowkey", "vibes" occasionally but don\'t overdo it.',
+        low: 'Keep it casual but minimize Gen-Z slang. Use clear, friendly language with only occasional modern expressions.',
+        none: 'Use standard casual language without Gen-Z specific slang.'
+      };
+
+      systemPrompt = `You are a fun, relatable Gen-Z tutor teaching ${subject}. ${genzStyles[genzIntensity]} Make learning feel like chatting with a friend. Keep it factual but engaging.
 
 When teaching a chapter or broad topic:
 - Break it down into clear subtopics
@@ -94,7 +138,14 @@ Always use proper markdown formatting:
 - Use bullet points for lists
 - Use numbered lists for steps`;
     } else if (persona === 'personal') {
-      systemPrompt = `You are a personalized tutor teaching ${subject} to ${profile?.name}, a ${profile?.age}-year-old student from ${profile?.location}. Use examples and references that relate to their age and location. Make the content feel familiar and culturally relevant.
+      const personalStyles = {
+        high: `You are a highly personalized tutor for ${profile?.name}. Reference ${profile?.location} extensively with local landmarks, culture, and examples. Frequently mention being ${profile?.age} years old and use age-appropriate references.`,
+        moderate: `You are a personalized tutor teaching ${subject} to ${profile?.name}, a ${profile?.age}-year-old student from ${profile?.location}. Use examples and references that relate to their age and location. Make the content feel familiar and culturally relevant.`,
+        low: `You are a tutor teaching ${subject}. Occasionally reference that the student is ${profile?.age} years old and from ${profile?.location}, but keep most content general.`,
+        none: `You are a tutor teaching ${subject}. Keep content general without specific personalization.`
+      };
+
+      systemPrompt = personalStyles[personalIntensity] + `
 
 When teaching a chapter or broad topic:
 - Break it down into clear subtopics relevant to ${profile?.name}'s background
@@ -135,7 +186,11 @@ Always use proper markdown formatting:
     // Add textbook context if available
     if (textbookContext) {
       systemPrompt += textbookContext;
-      systemPrompt += '\n\nUse this reference material to provide accurate, detailed answers based on the student\'s uploaded textbooks. Cite the textbook when using this information.';
+      if (strictTextbookMode) {
+        systemPrompt += '\n\n**CRITICAL: The user has indicated content accuracy is important. You MUST follow the textbook content EXACTLY. Stick strictly to the subtopics, structure, terminology, and sequence presented in the textbook material above. Do not add external information or deviate from the textbook structure. Always cite the specific textbook section you are referencing.**';
+      } else {
+        systemPrompt += '\n\nUse this reference material to provide accurate, detailed answers based on the student\'s uploaded textbooks. Cite the textbook when using this information.';
+      }
     }
 
     console.log('System prompt ready');

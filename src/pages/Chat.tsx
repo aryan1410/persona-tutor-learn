@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Send, Sparkles, Users, BookOpen, ClipboardList, Loader2, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Send, Sparkles, Users, BookOpen, ClipboardList, Loader2, Plus, Trash2, MessageSquare } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { QuizDialog } from "@/components/QuizDialog";
+import { FeedbackDialog } from "@/components/FeedbackDialog";
 
 type Persona = "genz" | "personal" | "normal";
 
@@ -31,6 +32,7 @@ const Chat = () => {
   const [currentQuizId, setCurrentQuizId] = useState<string | null>(null);
   const [quizRefreshKey, setQuizRefreshKey] = useState(0);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -385,14 +387,24 @@ const Chat = () => {
               New Chat
             </Button>
             {conversationId && (
-              <Button
-                variant="outline"
-                onClick={() => setDeleteDialogOpen(true)}
-                className="hover:scale-105 transition-smooth text-destructive hover:text-destructive"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setFeedbackDialogOpen(true)}
+                  className="hover:scale-105 transition-smooth"
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Feedback
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleteDialogOpen(true)}
+                  className="hover:scale-105 transition-smooth text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -572,6 +584,16 @@ const Chat = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Feedback Dialog */}
+      {conversationId && user && (
+        <FeedbackDialog
+          open={feedbackDialogOpen}
+          onOpenChange={setFeedbackDialogOpen}
+          conversationId={conversationId}
+          userId={user.id}
+        />
+      )}
     </div>
   );
 };
