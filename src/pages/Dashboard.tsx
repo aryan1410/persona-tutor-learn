@@ -14,7 +14,6 @@ import { QuizScoreTrendChart } from "@/components/QuizScoreTrendChart";
 import { SubjectDistributionChart } from "@/components/SubjectDistributionChart";
 import { ConversationSelector } from "@/components/ConversationSelector";
 import { AppSidebar } from "@/components/AppSidebar";
-import { TextbookSelector } from "@/components/TextbookSelector";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -121,14 +120,6 @@ const Dashboard = () => {
                   <p className="text-sm text-muted-foreground">{subject.description}</p>
                 </Card>
               ))}
-            </div>
-          </div>
-
-          {/* Current Textbook Selection */}
-          <div>
-            <h3 className="text-xl font-bold mb-4">Select Textbook</h3>
-            <div className="max-w-3xl">
-              <TextbookSelector />
             </div>
           </div>
 
