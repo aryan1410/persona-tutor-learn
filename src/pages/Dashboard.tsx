@@ -103,7 +103,7 @@ const Dashboard = () => {
       <div className="container mx-auto px-4 py-6 relative z-10">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold gradient-primary text-transparent bg-clip-text">
+            <h1 className="text-3xl font-bold text-foreground">
               D-GEN
             </h1>
           </div>
