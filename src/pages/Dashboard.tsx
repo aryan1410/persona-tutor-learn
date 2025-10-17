@@ -10,6 +10,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -59,14 +60,12 @@ const Dashboard = () => {
     },
   ];
 
-  const [showUploadDialog, setShowUploadDialog] = useState(false);
-
   const quickActions = [
     {
       title: "Upload Textbook",
       icon: Upload,
       description: "Add new study materials",
-      action: () => setShowUploadDialog(true),
+      action: () => setUploadDialogOpen(true),
     },
     {
       title: "View Progress",
@@ -94,11 +93,11 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative">
       <div className="absolute inset-0 gradient-hero opacity-5 pointer-events-none" />
       
       {/* Header */}
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mx-auto px-4 py-6 relative z-10">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold gradient-primary text-transparent bg-clip-text">
@@ -116,7 +115,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 relative z-10">
         {/* Welcome Section */}
         <div className="mb-12">
           <h2 className="text-4xl font-bold mb-2">
@@ -134,7 +133,7 @@ const Dashboard = () => {
             {subjects.map((subject, index) => (
               <Card
                 key={index}
-                className="p-8 hover:scale-105 transition-smooth shadow-elegant hover:shadow-glow cursor-pointer animate-fade-in"
+                className="p-8 hover:scale-105 transition-smooth shadow-elegant hover:shadow-glow cursor-pointer animate-fade-in relative z-10"
                 style={{ animationDelay: `${index * 0.1}s` }}
                 onClick={() => navigate(subject.route)}
               >
@@ -169,11 +168,8 @@ const Dashboard = () => {
       </div>
 
       <UploadTextbookDialog 
-        trigger={
-          <div style={{ display: 'none' }}>
-            {showUploadDialog && <button onClick={() => setShowUploadDialog(true)} />}
-          </div>
-        }
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
       />
     </div>
   );

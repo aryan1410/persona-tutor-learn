@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,9 +8,14 @@ import { Upload, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-export const UploadTextbookDialog = ({ trigger }: { trigger?: React.ReactNode }) => {
+export const UploadTextbookDialog = ({ 
+  open, 
+  onOpenChange 
+}: { 
+  open: boolean; 
+  onOpenChange: (open: boolean) => void;
+}) => {
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("");
@@ -87,7 +92,7 @@ export const UploadTextbookDialog = ({ trigger }: { trigger?: React.ReactNode })
         description: "Textbook uploaded and processed successfully",
       });
 
-      setOpen(false);
+      onOpenChange(false);
       setTitle("");
       setSubject("");
       setFile(null);
@@ -104,15 +109,7 @@ export const UploadTextbookDialog = ({ trigger }: { trigger?: React.ReactNode })
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button className="w-full">
-            <Upload className="w-4 h-4 mr-2" />
-            Upload Textbook
-          </Button>
-        )}
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Upload Textbook</DialogTitle>
@@ -160,7 +157,7 @@ export const UploadTextbookDialog = ({ trigger }: { trigger?: React.ReactNode })
         <div className="flex gap-2">
           <Button
             variant="outline"
-            onClick={() => setOpen(false)}
+            onClick={() => onOpenChange(false)}
             className="flex-1"
             disabled={loading}
           >

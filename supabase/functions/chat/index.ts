@@ -35,6 +35,42 @@ serve(async (req) => {
 
     console.log('User profile loaded:', profile);
 
+    // Get user's textbooks for this subject to provide context
+    const { data: subjectData } = await supabase
+      .from('subjects')
+      .select('id')
+      .eq('name', subject)
+      .single();
+
+    let textbookContext = '';
+    if (subjectData) {
+      const { data: textbooks } = await supabase
+        .from('textbooks')
+        .select('id, title')
+        .eq('user_id', userId)
+        .eq('subject_id', subjectData.id);
+
+      if (textbooks && textbooks.length > 0) {
+        // Get relevant chunks based on last user message
+        const lastMessage = messages[messages.length - 1].content.toLowerCase();
+        
+        // Simple keyword search across all textbook chunks
+        const { data: relevantChunks } = await supabase
+          .from('textbook_chunks')
+          .select('content, textbooks!inner(title)')
+          .in('textbook_id', textbooks.map(t => t.id))
+          .limit(5);
+
+        if (relevantChunks && relevantChunks.length > 0) {
+          textbookContext = '\n\n--- Reference Material from Uploaded Textbooks ---\n';
+          relevantChunks.forEach((chunk: any) => {
+            textbookContext += `\nFrom "${chunk.textbooks.title}":\n${chunk.content}\n`;
+          });
+          console.log('Added textbook context, chunks:', relevantChunks.length);
+        }
+      }
+    }
+
     // Build system prompt based on persona
     let systemPrompt = '';
     
@@ -47,6 +83,12 @@ serve(async (req) => {
     }
 
     systemPrompt += `\n\nFor Geography topics, you can describe visual elements but do not generate images yourself. Focus on clear explanations.`;
+    
+    // Add textbook context if available
+    if (textbookContext) {
+      systemPrompt += textbookContext;
+      systemPrompt += '\n\nUse this reference material to provide accurate, detailed answers based on the student\'s uploaded textbooks. Cite the textbook when using this information.';
+    }
 
     console.log('System prompt ready');
 

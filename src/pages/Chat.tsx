@@ -207,7 +207,7 @@ const Chat = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="absolute inset-0 gradient-hero opacity-5" />
+      <div className="absolute inset-0 gradient-hero opacity-5 pointer-events-none" />
       
       {/* Header */}
       <div className="container mx-auto px-4 py-4 border-b relative">

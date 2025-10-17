@@ -221,6 +221,41 @@ export type Database = {
         }
         Relationships: []
       }
+      textbook_chunks: {
+        Row: {
+          chunk_index: number
+          content: string
+          created_at: string
+          id: string
+          page_number: number | null
+          textbook_id: string
+        }
+        Insert: {
+          chunk_index: number
+          content: string
+          created_at?: string
+          id?: string
+          page_number?: number | null
+          textbook_id: string
+        }
+        Update: {
+          chunk_index?: number
+          content?: string
+          created_at?: string
+          id?: string
+          page_number?: number | null
+          textbook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "textbook_chunks_textbook_id_fkey"
+            columns: ["textbook_id"]
+            isOneToOne: false
+            referencedRelation: "textbooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       textbooks: {
         Row: {
           content: Json | null

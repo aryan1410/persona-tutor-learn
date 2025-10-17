@@ -70,7 +70,7 @@ const Signup = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="absolute inset-0 gradient-hero opacity-5" />
+      <div className="absolute inset-0 gradient-hero opacity-5 pointer-events-none" />
       
       <Card className="w-full max-w-md p-8 relative shadow-elegant">
         <Button
