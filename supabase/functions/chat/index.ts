@@ -140,42 +140,79 @@ Always use proper markdown formatting:
 
     console.log('System prompt ready');
 
-    // Detect if the user is asking for an image/map/diagram
-    const lastUserMessage = messages[messages.length - 1]?.content.toLowerCase() || '';
-    const imageKeywords = ['show me', 'draw', 'map of', 'diagram', 'picture', 'image', 'visualize', 'illustrate'];
-    const shouldGenerateImage = imageKeywords.some(keyword => lastUserMessage.includes(keyword));
-
-    let generatedImage = null;
+    // For geography, determine if user is asking for a chapter or subtopic
+    let generatedImages: string[] = [];
     
-    if (shouldGenerateImage && subject === 'geography') {
-      console.log('Generating image for:', lastUserMessage);
+    if (subject === 'geography') {
+      const lastUserMessage = messages[messages.length - 1]?.content || '';
       
-      // Generate image using Lovable AI
-      const imageResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      // Use AI to analyze if it's a chapter or subtopic request
+      const analysisResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${LOVABLE_API_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'google/gemini-2.5-flash-image-preview',
+          model: 'google/gemini-2.5-flash',
           messages: [
             {
+              role: 'system',
+              content: 'Analyze if the user is asking about a full chapter/broad topic or a specific subtopic. Respond with exactly "CHAPTER" if it\'s a broad topic covering multiple subtopics, or "SUBTOPIC" if it\'s a specific focused concept. Examples: "teach me about climate" = CHAPTER, "explain monsoons" = SUBTOPIC, "tell me about Asia" = CHAPTER, "what are tectonic plates" = SUBTOPIC'
+            },
+            {
               role: 'user',
-              content: `Create a clear, educational geography ${lastUserMessage.includes('map') ? 'map' : 'diagram'} for: ${lastUserMessage}. Make it detailed and informative.`
+              content: lastUserMessage
             }
           ],
-          modalities: ['image', 'text']
         }),
       });
 
-      if (imageResponse.ok) {
-        const imageData = await imageResponse.json();
-        generatedImage = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-        console.log('Image generated successfully');
-      } else {
-        console.error('Image generation failed:', imageResponse.status);
+      let numImages = 1;
+      if (analysisResponse.ok) {
+        const analysisData = await analysisResponse.json();
+        const analysis = analysisData.choices?.[0]?.message?.content?.trim().toUpperCase();
+        numImages = analysis === 'CHAPTER' ? 2 : 1;
+        console.log('Topic analysis:', analysis, '- generating', numImages, 'images');
       }
+
+      // Generate images based on the topic
+      const imagePromises = [];
+      for (let i = 0; i < numImages; i++) {
+        const imagePrompt = numImages === 2 
+          ? `Create a clear, educational geography diagram or map related to aspect ${i + 1} of: ${lastUserMessage}. Make it detailed and informative.`
+          : `Create a clear, educational geography diagram or map for: ${lastUserMessage}. Make it detailed and informative.`;
+        
+        imagePromises.push(
+          fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'google/gemini-2.5-flash-image-preview',
+              messages: [{ role: 'user', content: imagePrompt }],
+              modalities: ['image', 'text']
+            }),
+          })
+        );
+      }
+
+      const imageResponses = await Promise.all(imagePromises);
+      for (const imageResponse of imageResponses) {
+        if (imageResponse.ok) {
+          const imageData = await imageResponse.json();
+          const imageUrl = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+          if (imageUrl) {
+            generatedImages.push(imageUrl);
+          }
+        } else {
+          console.error('Image generation failed:', imageResponse.status);
+        }
+      }
+      
+      console.log('Generated', generatedImages.length, 'images for geography');
     }
 
     // Call Lovable AI for text response
@@ -231,13 +268,13 @@ Always use proper markdown formatting:
         content: messages[messages.length - 1].content,
       });
 
-      // Save assistant message with optional image
+      // Save assistant message with optional images
       await supabase.from('messages').insert({
         conversation_id: conversationId,
         role: 'assistant',
         content: aiMessage,
         persona: persona,
-        images: generatedImage ? [generatedImage] : null,
+        images: generatedImages.length > 0 ? generatedImages : null,
       });
 
       // Update conversation timestamp
@@ -266,7 +303,7 @@ Always use proper markdown formatting:
     return new Response(
       JSON.stringify({ 
         message: aiMessage,
-        image: generatedImage 
+        images: generatedImages.length > 0 ? generatedImages : null
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

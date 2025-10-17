@@ -107,7 +107,7 @@ const Chat = () => {
           isUser: msg.role === 'user',
           timestamp: new Date(msg.created_at),
           persona: msg.persona,
-          image: msg.images?.[0],
+          images: msg.images || [],
         })));
       }
     } catch (error) {
@@ -155,7 +155,7 @@ const Chat = () => {
       text: message,
       isUser: true,
       timestamp: new Date(),
-      image: null,
+      images: [],
     };
 
     setMessages([...messages, userMessage]);
@@ -191,7 +191,7 @@ const Chat = () => {
         isUser: false,
         timestamp: new Date(),
         persona: selectedPersona,
-        image: data.image || null,
+        images: data.images || [],
       };
 
       setMessages(prev => [...prev, aiResponse]);
@@ -385,14 +385,19 @@ const Chat = () => {
                   <Card className={`p-4 max-w-2xl ${msg.isUser ? "gradient-primary text-white" : ""}`}>
                     {msg.isUser ? (
                       <p className="leading-relaxed">{msg.text}</p>
-                    ) : (
+                     ) : (
                       <div className="space-y-4">
-                        {msg.image && (
-                          <img 
-                            src={msg.image} 
-                            alt="Generated visualization" 
-                            className="rounded-lg w-full max-w-xl"
-                          />
+                        {msg.images && msg.images.length > 0 && (
+                          <div className={`grid gap-4 ${msg.images.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                            {msg.images.map((img: string, idx: number) => (
+                              <img 
+                                key={idx}
+                                src={img} 
+                                alt={`Generated visualization ${idx + 1}`} 
+                                className="rounded-lg w-full"
+                              />
+                            ))}
+                          </div>
                         )}
                         <div className="prose prose-sm max-w-none dark:prose-invert">
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>
