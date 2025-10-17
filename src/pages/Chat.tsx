@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ type Persona = "genz" | "personal" | "normal";
 
 const Chat = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { subject } = useParams<{ subject: string }>();
   const { toast } = useToast();
   const [user, setUser] = useState<any>(null);
@@ -37,7 +38,19 @@ const Chat = () => {
 
   useEffect(() => {
     if (user && subject) {
-      initializeConversation();
+      const state = location.state as { conversationId?: string; newChat?: boolean };
+      
+      if (state?.conversationId) {
+        // Load specific conversation
+        setConversationId(state.conversationId);
+        loadMessages(state.conversationId);
+      } else if (state?.newChat) {
+        // Force create new conversation
+        createNewConversation();
+      } else {
+        // Default behavior: load most recent or create new
+        initializeConversation();
+      }
     }
   }, [user, subject]);
 
@@ -47,6 +60,35 @@ const Chat = () => {
       setUser(session.user);
     } else {
       navigate("/login");
+    }
+  };
+
+  const createNewConversation = async () => {
+    try {
+      const { data: subjectData } = await supabase
+        .from('subjects')
+        .select('id')
+        .eq('name', subject)
+        .single();
+
+      if (!subjectData) return;
+
+      const { data: newConv } = await supabase
+        .from('conversations')
+        .insert({
+          user_id: user.id,
+          subject_id: subjectData.id,
+          title: `${subject} learning session`,
+        })
+        .select()
+        .single();
+
+      if (newConv) {
+        setConversationId(newConv.id);
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error('Error creating conversation:', error);
     }
   };
 
@@ -75,19 +117,7 @@ const Chat = () => {
         setConversationId(existingConv.id);
         loadMessages(existingConv.id);
       } else {
-        const { data: newConv } = await supabase
-          .from('conversations')
-          .insert({
-            user_id: user.id,
-            subject_id: subjectData.id,
-            title: `${subject} learning session`,
-          })
-          .select()
-          .single();
-
-        if (newConv) {
-          setConversationId(newConv.id);
-        }
+        await createNewConversation();
       }
     } catch (error) {
       console.error('Error initializing conversation:', error);

@@ -13,6 +13,7 @@ import { FriendsManager } from "@/components/FriendsManager";
 import { ActivityChart } from "@/components/ActivityChart";
 import { QuizScoreTrendChart } from "@/components/QuizScoreTrendChart";
 import { SubjectDistributionChart } from "@/components/SubjectDistributionChart";
+import { ConversationSelector } from "@/components/ConversationSelector";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -20,6 +21,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [conversationSelectorOpen, setConversationSelectorOpen] = useState(false);
+  const [selectedSubject, setSelectedSubject] = useState<string>("");
 
   useEffect(() => {
     checkUser();
@@ -52,20 +55,23 @@ const Dashboard = () => {
     navigate("/");
   };
 
+  const handleSubjectClick = (subject: string) => {
+    setSelectedSubject(subject);
+    setConversationSelectorOpen(true);
+  };
+
   const subjects = [
     {
       title: "History",
       icon: BookOpen,
       description: "Learn about the past through different perspectives",
       gradient: "gradient-primary",
-      route: "/chat/history",
     },
     {
       title: "Geography",
       icon: MapPin,
       description: "Explore the world with visual learning",
       gradient: "gradient-secondary",
-      route: "/chat/geography",
     },
   ];
 
@@ -132,7 +138,7 @@ const Dashboard = () => {
                 key={index}
                 className="p-8 hover:scale-105 transition-smooth shadow-elegant hover:shadow-glow cursor-pointer animate-fade-in relative z-10"
                 style={{ animationDelay: `${index * 0.1}s` }}
-                onClick={() => navigate(subject.route)}
+                onClick={() => handleSubjectClick(subject.title)}
               >
                 <div className={`${subject.gradient} w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-elegant`}>
                   <subject.icon className="w-8 h-8 text-white" />
@@ -212,6 +218,12 @@ const Dashboard = () => {
         open={uploadDialogOpen}
         onOpenChange={setUploadDialogOpen}
         onSuccess={() => setRefreshKey(prev => prev + 1)}
+      />
+
+      <ConversationSelector
+        open={conversationSelectorOpen}
+        onOpenChange={setConversationSelectorOpen}
+        subject={selectedSubject}
       />
     </div>
   );
