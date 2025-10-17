@@ -14,6 +14,7 @@ import remarkGfm from "remark-gfm";
 import { QuizDialog } from "@/components/QuizDialog";
 import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { AppSidebar } from "@/components/AppSidebar";
+import { TextbookSelector } from "@/components/TextbookSelector";
 
 // Chat page component
 type Persona = "genz" | "personal" | "normal";
@@ -390,26 +391,37 @@ const Chat = () => {
         </div>
 
         {/* Persona Selector */}
-        <div className="bg-muted/30 border-b border-border px-8 py-4">
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            {personas.map((persona) => (
-              <Button
-                key={persona.id}
-                variant={selectedPersona === persona.id ? "default" : "outline"}
-                size="sm"
-                className={`flex items-center gap-2 whitespace-nowrap transition-smooth ${
-                  selectedPersona === persona.id ? persona.color + " text-white" : ""
-                }`}
-                onClick={() => setSelectedPersona(persona.id)}
-              >
-                <persona.icon className="w-4 h-4" />
-                <div className="text-left">
-                  <div className="font-semibold text-sm">{persona.name}</div>
-                  <div className="text-xs opacity-80">{persona.description}</div>
-                </div>
-              </Button>
-            ))}
+        <div className="bg-muted/30 border-b border-border px-8 py-4 space-y-4">
+          <div>
+            <p className="text-sm font-medium text-muted-foreground mb-3">Choose your learning style</p>
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {personas.map((persona) => (
+                <Button
+                  key={persona.id}
+                  variant={selectedPersona === persona.id ? "default" : "outline"}
+                  size="sm"
+                  className={`flex items-center gap-2 whitespace-nowrap transition-smooth ${
+                    selectedPersona === persona.id ? persona.color + " text-white" : ""
+                  }`}
+                  onClick={() => setSelectedPersona(persona.id)}
+                >
+                  <persona.icon className="w-4 h-4" />
+                  <div className="text-left">
+                    <div className="font-semibold text-sm">{persona.name}</div>
+                    <div className="text-xs opacity-80">{persona.description}</div>
+                  </div>
+                </Button>
+              ))}
+            </div>
           </div>
+
+          {/* Textbook Selector - only for History and Geography */}
+          {(subject?.toLowerCase() === 'history' || subject?.toLowerCase() === 'geography') && (
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-3">Select textbook (optional)</p>
+              <TextbookSelector />
+            </div>
+          )}
         </div>
 
         {/* Chat Messages */}
