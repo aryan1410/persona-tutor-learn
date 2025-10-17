@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Send, Sparkles, Users, BookOpen, ClipboardList, Loader2, Plus } from "lucide-react";
+import { ArrowLeft, Send, Sparkles, Users, BookOpen, ClipboardList, Loader2, Plus, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
@@ -28,6 +29,7 @@ const Chat = () => {
   const [quizDialogOpen, setQuizDialogOpen] = useState(false);
   const [currentQuizId, setCurrentQuizId] = useState<string | null>(null);
   const [quizRefreshKey, setQuizRefreshKey] = useState(0);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -294,6 +296,35 @@ const Chat = () => {
     }
   };
 
+  const handleDeleteChat = async () => {
+    if (!conversationId) return;
+
+    try {
+      const { error } = await supabase
+        .from('conversations')
+        .delete()
+        .eq('id', conversationId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Chat deleted",
+        description: "Your conversation has been deleted successfully",
+      });
+
+      navigate("/dashboard");
+    } catch (error) {
+      console.error('Error deleting chat:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete chat",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <div className="absolute inset-0 gradient-hero opacity-5 pointer-events-none" />
@@ -314,14 +345,26 @@ const Chat = () => {
               <p className="text-sm text-muted-foreground">Choose your learning style below</p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            onClick={handleNewChat}
-            className="hover:scale-105 transition-smooth"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Chat
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleNewChat}
+              className="hover:scale-105 transition-smooth"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              New Chat
+            </Button>
+            {conversationId && (
+              <Button
+                variant="outline"
+                onClick={() => setDeleteDialogOpen(true)}
+                className="hover:scale-105 transition-smooth text-destructive hover:text-destructive"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -481,6 +524,24 @@ const Chat = () => {
           onComplete={() => setQuizRefreshKey(prev => prev + 1)}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this chat?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your conversation and all messages.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteChat} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

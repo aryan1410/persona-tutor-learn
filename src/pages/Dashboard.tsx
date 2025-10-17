@@ -10,6 +10,9 @@ import { QuizResults } from "@/components/QuizResults";
 import { SubjectProgress } from "@/components/SubjectProgress";
 import { Leaderboard } from "@/components/Leaderboard";
 import { FriendsManager } from "@/components/FriendsManager";
+import { ActivityChart } from "@/components/ActivityChart";
+import { QuizScoreTrendChart } from "@/components/QuizScoreTrendChart";
+import { SubjectDistributionChart } from "@/components/SubjectDistributionChart";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -157,6 +160,18 @@ const Dashboard = () => {
                 <p className="text-sm text-muted-foreground">{action.description}</p>
               </Card>
             ))}
+          </div>
+        </div>
+
+        {/* Analytics Dashboard */}
+        <div className="mb-12">
+          <h3 className="text-2xl font-bold mb-6">Learning Analytics</h3>
+          <div className="grid lg:grid-cols-2 gap-6 max-w-6xl">
+            <ActivityChart />
+            <QuizScoreTrendChart />
+          </div>
+          <div className="mt-6 max-w-6xl">
+            <SubjectDistributionChart />
           </div>
         </div>
 
