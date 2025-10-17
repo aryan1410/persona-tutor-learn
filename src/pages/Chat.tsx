@@ -4,29 +4,20 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Send, Sparkles, Users, BookOpen, Loader2 } from "lucide-react";
+import { ArrowLeft, Send, Sparkles, Users, BookOpen } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 
 type Persona = "genz" | "personal" | "normal";
 
-interface Message {
-  id: string;
-  role: string;
-  content: string;
-  persona?: string;
-  created_at: string;
-}
-
 const Chat = () => {
   const navigate = useNavigate();
   const { subject } = useParams<{ subject: string }>();
   const { toast } = useToast();
   const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [selectedPersona, setSelectedPersona] = useState<Persona>("genz");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -45,70 +36,74 @@ const Chat = () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
       setUser(session.user);
-      
-      // Fetch profile
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", session.user.id)
-        .single();
-      
-      setProfile(profileData);
     } else {
       navigate("/login");
     }
   };
 
   const initializeConversation = async () => {
-    // Get subject ID
-    const { data: subjectData } = await supabase
-      .from("subjects")
-      .select("id")
-      .eq("name", subject)
-      .single();
-
-    if (!subjectData) return;
-
-    // Check for existing conversation
-    const { data: existingConv } = await supabase
-      .from("conversations")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("subject_id", subjectData.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
-
-    if (existingConv) {
-      setConversationId(existingConv.id);
-      loadMessages(existingConv.id);
-    } else {
-      // Create new conversation
-      const { data: newConv } = await supabase
-        .from("conversations")
-        .insert({
-          user_id: user.id,
-          subject_id: subjectData.id,
-          title: `${subject} Learning Session`,
-        })
-        .select()
+    try {
+      // Get subject ID
+      const { data: subjectData } = await supabase
+        .from('subjects')
+        .select('id')
+        .eq('name', subject)
         .single();
 
-      if (newConv) {
-        setConversationId(newConv.id);
+      if (!subjectData) return;
+
+      // Create or get existing conversation
+      const { data: existingConv } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('subject_id', subjectData.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingConv) {
+        setConversationId(existingConv.id);
+        loadMessages(existingConv.id);
+      } else {
+        const { data: newConv } = await supabase
+          .from('conversations')
+          .insert({
+            user_id: user.id,
+            subject_id: subjectData.id,
+            title: `${subject} learning session`,
+          })
+          .select()
+          .single();
+
+        if (newConv) {
+          setConversationId(newConv.id);
+        }
       }
+    } catch (error) {
+      console.error('Error initializing conversation:', error);
     }
   };
 
   const loadMessages = async (convId: string) => {
-    const { data } = await supabase
-      .from("messages")
-      .select("*")
-      .eq("conversation_id", convId)
-      .order("created_at", { ascending: true });
+    try {
+      const { data } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', convId)
+        .order('created_at', { ascending: true });
 
-    if (data) {
-      setMessages(data);
+      if (data) {
+        setMessages(data.map(msg => ({
+          id: msg.id,
+          text: msg.content,
+          isUser: msg.role === 'user',
+          timestamp: new Date(msg.created_at),
+          persona: msg.persona,
+        })));
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error);
     }
   };
 
@@ -137,35 +132,74 @@ const Chat = () => {
   ];
 
   const handleSendMessage = async () => {
-    if (!message.trim() || !conversationId || loading) return;
+    if (!message.trim() || loading) return;
+    if (!conversationId) {
+      toast({
+        title: "Error",
+        description: "Conversation not initialized",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    const userMessage = message;
+    const userMessage = {
+      id: Date.now(),
+      text: message,
+      isUser: true,
+      timestamp: new Date(),
+    };
+
+    setMessages([...messages, userMessage]);
+    const currentMessage = message;
     setMessage("");
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("chat", {
+      const { data, error } = await supabase.functions.invoke('chat', {
         body: {
-          conversationId,
-          message: userMessage,
+          messages: [
+            ...messages.map(m => ({ role: m.isUser ? 'user' : 'assistant', content: m.text })),
+            { role: 'user', content: currentMessage }
+          ],
           persona: selectedPersona,
           subject: subject,
-          userAge: profile?.age,
-          userLocation: profile?.location,
+          userId: user.id,
+          conversationId: conversationId,
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
-      // Reload messages
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      const aiResponse = {
+        id: Date.now() + 1,
+        text: data.message,
+        isUser: false,
+        timestamp: new Date(),
+        persona: selectedPersona,
+      };
+
+      setMessages(prev => [...prev, aiResponse]);
+      
+      // Reload messages to ensure sync
       await loadMessages(conversationId);
+      
     } catch (error: any) {
-      console.error("Chat error:", error);
+      console.error('Error sending message:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to send message",
+        description: error.message || "Failed to send message. Please try again.",
         variant: "destructive",
       });
+      
+      // Remove the user message if failed
+      setMessages(messages);
+      setMessage(currentMessage);
     } finally {
       setLoading(false);
     }
@@ -229,25 +263,13 @@ const Chat = () => {
                 Ask me anything about {subject}! I'll explain it using your selected persona style.
               </p>
               <div className="grid gap-2 max-w-md mx-auto text-left">
-                <Button 
-                  variant="outline" 
-                  className="justify-start"
-                  onClick={() => setMessage("Teach me about the Cold War")}
-                >
+                <Button variant="outline" className="justify-start" onClick={() => setMessage("Teach me about the Cold War")}>
                   "Teach me about the Cold War"
                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="justify-start"
-                  onClick={() => setMessage("Explain Chapter 2 from my textbook")}
-                >
+                <Button variant="outline" className="justify-start" onClick={() => setMessage("Explain Chapter 2 from my textbook")}>
                   "Explain Chapter 2 from my textbook"
                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="justify-start"
-                  onClick={() => setMessage("What are tectonic plates?")}
-                >
+                <Button variant="outline" className="justify-start" onClick={() => setMessage("What are tectonic plates?")}>
                   "What are tectonic plates?"
                 </Button>
               </div>
@@ -256,37 +278,23 @@ const Chat = () => {
             messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex gap-3 ${msg.role === 'user' ? "justify-end" : "justify-start"} animate-fade-in`}
+                className={`flex gap-3 ${msg.isUser ? "justify-end" : "justify-start"} animate-fade-in`}
               >
-                {msg.role === 'assistant' && (
+                {!msg.isUser && (
                   <Avatar className="gradient-primary">
                     <AvatarFallback className="bg-transparent text-white">AI</AvatarFallback>
                   </Avatar>
                 )}
-                <Card className={`p-4 max-w-2xl ${msg.role === 'user' ? "gradient-primary text-white" : ""}`}>
-                  <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                <Card className={`p-4 max-w-2xl ${msg.isUser ? "gradient-primary text-white" : ""}`}>
+                  <p className="leading-relaxed">{msg.text}</p>
                 </Card>
-                {msg.role === 'user' && (
+                {msg.isUser && (
                   <Avatar>
-                    <AvatarFallback>{profile?.name?.[0] || "U"}</AvatarFallback>
+                    <AvatarFallback>{user?.user_metadata?.name?.[0] || "U"}</AvatarFallback>
                   </Avatar>
                 )}
               </div>
             ))
-          )}
-          
-          {loading && (
-            <div className="flex gap-3 justify-start animate-fade-in">
-              <Avatar className="gradient-primary">
-                <AvatarFallback className="bg-transparent text-white">AI</AvatarFallback>
-              </Avatar>
-              <Card className="p-4 max-w-2xl">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Thinking...</span>
-                </div>
-              </Card>
-            </div>
           )}
         </div>
       </ScrollArea>
@@ -306,9 +314,13 @@ const Chat = () => {
             <Button
               className="gradient-primary text-white hover:opacity-90 transition-smooth"
               onClick={handleSendMessage}
-              disabled={loading || !message.trim()}
+              disabled={loading}
             >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              {loading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
             </Button>
           </div>
         </div>
