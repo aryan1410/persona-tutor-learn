@@ -58,12 +58,10 @@ const Landing = () => {
         <div className="container mx-auto px-4 py-20 relative">
           <div className="text-center max-w-4xl mx-auto space-y-8">
             <div className="inline-block">
-              <div className="gradient-primary text-transparent bg-clip-text">
-                <h1 className="text-6xl md:text-7xl font-bold mb-4 animate-fade-in">
-                  D-GEN
-                </h1>
-              </div>
-              <p className="text-2xl md:text-3xl font-semibold text-foreground/80 animate-fade-in" style={{ animationDelay: "0.1s" }}>
+              <h1 className="text-6xl md:text-7xl font-bold mb-4 animate-fade-in text-white drop-shadow-[0_0_30px_rgba(147,134,255,0.8)]">
+                D-GEN
+              </h1>
+              <p className="text-2xl md:text-3xl font-semibold text-foreground/90 animate-fade-in" style={{ animationDelay: "0.1s" }}>
                 Degeneralize content. Tailor to you.
               </p>
             </div>
