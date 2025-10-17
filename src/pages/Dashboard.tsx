@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { BookOpen, MapPin, LogOut, Upload, Trophy, BarChart } from "lucide-react";
+import { UploadTextbookDialog } from "@/components/UploadTextbookDialog";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -58,12 +59,14 @@ const Dashboard = () => {
     },
   ];
 
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+
   const quickActions = [
     {
       title: "Upload Textbook",
       icon: Upload,
       description: "Add new study materials",
-      action: () => {},
+      action: () => setShowUploadDialog(true),
     },
     {
       title: "View Progress",
@@ -92,7 +95,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen">
-      <div className="absolute inset-0 gradient-hero opacity-5" />
+      <div className="absolute inset-0 gradient-hero opacity-5 pointer-events-none" />
       
       {/* Header */}
       <div className="container mx-auto px-4 py-6">
@@ -152,7 +155,7 @@ const Dashboard = () => {
             {quickActions.map((action, index) => (
               <Card
                 key={index}
-                className="p-6 hover:shadow-elegant transition-smooth cursor-pointer animate-fade-in"
+                className="p-6 hover:shadow-elegant transition-smooth cursor-pointer animate-fade-in relative z-10"
                 style={{ animationDelay: `${index * 0.1 + 0.2}s` }}
                 onClick={action.action}
               >
@@ -164,6 +167,14 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      <UploadTextbookDialog 
+        trigger={
+          <div style={{ display: 'none' }}>
+            {showUploadDialog && <button onClick={() => setShowUploadDialog(true)} />}
+          </div>
+        }
+      />
     </div>
   );
 };
