@@ -48,21 +48,10 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="absolute inset-0 gradient-hero opacity-5 pointer-events-none" />
-      
-      <Card className="w-full max-w-md p-8 relative shadow-elegant">
-        <Button
-          variant="ghost"
-          className="absolute top-4 left-4"
-          onClick={() => navigate("/")}
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
-
-        <div className="text-center mb-8 mt-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+      <Card className="w-full max-w-md p-8 shadow-lg">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-foreground mb-2">
             Welcome Back
           </h1>
           <p className="text-muted-foreground">Sign in to continue learning</p>

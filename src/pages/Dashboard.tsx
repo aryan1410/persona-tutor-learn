@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { BookOpen, MapPin, LogOut, Upload } from "lucide-react";
+import { BookOpen, MapPin, Upload } from "lucide-react";
 import { UploadTextbookDialog } from "@/components/UploadTextbookDialog";
 import { TextbooksList } from "@/components/TextbooksList";
 import { QuizResults } from "@/components/QuizResults";
@@ -14,6 +13,7 @@ import { ActivityChart } from "@/components/ActivityChart";
 import { QuizScoreTrendChart } from "@/components/QuizScoreTrendChart";
 import { SubjectDistributionChart } from "@/components/SubjectDistributionChart";
 import { ConversationSelector } from "@/components/ConversationSelector";
+import { AppSidebar } from "@/components/AppSidebar";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -48,11 +48,6 @@ const Dashboard = () => {
       navigate("/login");
     }
     setLoading(false);
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/");
   };
 
   const handleSubjectClick = (subject: string) => {
@@ -96,123 +91,106 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen relative">
-      <div className="absolute inset-0 gradient-hero opacity-5 pointer-events-none" />
+    <div className="min-h-screen flex">
+      <AppSidebar />
       
-      {/* Header */}
-      <div className="container mx-auto px-4 py-6 relative z-10">
-        <div className="flex justify-between items-center">
+      <main className="flex-1 overflow-auto bg-background">
+        {/* Header */}
+        <div className="bg-card border-b border-border px-8 py-6">
+          <h2 className="text-3xl font-bold text-foreground">Dashboard for Student</h2>
+          <p className="text-muted-foreground mt-1">Welcome back, {user?.user_metadata?.name || "Student"}!</p>
+        </div>
+
+        <div className="p-8 space-y-8">
+          {/* Subjects */}
           <div>
-            <h1 className="text-3xl font-bold text-foreground">
-              D-GEN
-            </h1>
+            <h3 className="text-xl font-bold mb-4">Choose Your Subject</h3>
+            <div className="grid md:grid-cols-2 gap-4 max-w-3xl">
+              {subjects.map((subject, index) => (
+                <Card
+                  key={index}
+                  className="p-6 hover:shadow-lg transition-smooth cursor-pointer animate-fade-in"
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                  onClick={() => handleSubjectClick(subject.title)}
+                >
+                  <div className={`${subject.gradient} w-14 h-14 rounded-xl flex items-center justify-center mb-4`}>
+                    <subject.icon className="w-7 h-7 text-white" />
+                  </div>
+                  <h4 className="text-xl font-bold mb-2">{subject.title}</h4>
+                  <p className="text-sm text-muted-foreground">{subject.description}</p>
+                </Card>
+              ))}
+            </div>
           </div>
-          <Button
-            variant="outline"
-            onClick={handleLogout}
-            className="hover:scale-105 transition-smooth"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Logout
-          </Button>
-        </div>
-      </div>
 
-      <div className="container mx-auto px-4 py-8 relative z-10">
-        {/* Welcome Section */}
-        <div className="mb-12">
-          <h2 className="text-4xl font-bold mb-2">
-            Welcome back, {user?.user_metadata?.name || "Student"}!
-          </h2>
-          <p className="text-xl text-muted-foreground">
-            Ready to continue your learning journey?
-          </p>
-        </div>
+          {/* Quick Actions */}
+          <div>
+            <h3 className="text-xl font-bold mb-4">Quick Actions</h3>
+            <div className="grid md:grid-cols-1 gap-4 max-w-3xl">
+              {quickActions.map((action, index) => (
+                <Card
+                  key={index}
+                  className="p-5 hover:shadow-lg transition-smooth cursor-pointer animate-fade-in"
+                  style={{ animationDelay: `${index * 0.1 + 0.2}s` }}
+                  onClick={action.action}
+                >
+                  <div className="flex items-center gap-4">
+                    <action.icon className="w-8 h-8 text-primary" />
+                    <div>
+                      <h4 className="font-bold mb-1">{action.title}</h4>
+                      <p className="text-sm text-muted-foreground">{action.description}</p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
 
-        {/* Subjects */}
-        <div className="mb-12">
-          <h3 className="text-2xl font-bold mb-6">Choose Your Subject</h3>
-          <div className="grid md:grid-cols-2 gap-6 max-w-4xl">
-            {subjects.map((subject, index) => (
-              <Card
-                key={index}
-                className="p-8 hover:scale-105 transition-smooth shadow-elegant hover:shadow-glow cursor-pointer animate-fade-in relative z-10"
-                style={{ animationDelay: `${index * 0.1}s` }}
-                onClick={() => handleSubjectClick(subject.title)}
-              >
-                <div className={`${subject.gradient} w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-elegant`}>
-                  <subject.icon className="w-8 h-8 text-white" />
-                </div>
-                <h4 className="text-2xl font-bold mb-3">{subject.title}</h4>
-                <p className="text-muted-foreground">{subject.description}</p>
-              </Card>
-            ))}
+          {/* Analytics Dashboard */}
+          <div>
+            <h3 className="text-xl font-bold mb-4">Learning Analytics</h3>
+            <div className="grid lg:grid-cols-2 gap-4 max-w-6xl">
+              <ActivityChart />
+              <QuizScoreTrendChart />
+            </div>
+            <div className="mt-4 max-w-6xl">
+              <SubjectDistributionChart />
+            </div>
           </div>
-        </div>
 
-        {/* Quick Actions */}
-        <div className="mb-12">
-          <h3 className="text-2xl font-bold mb-6">Quick Actions</h3>
-          <div className="grid md:grid-cols-1 gap-6 max-w-4xl">
-            {quickActions.map((action, index) => (
-              <Card
-                key={index}
-                className="p-6 hover:shadow-elegant transition-smooth cursor-pointer animate-fade-in relative z-10"
-                style={{ animationDelay: `${index * 0.1 + 0.2}s` }}
-                onClick={action.action}
-              >
-                <action.icon className="w-10 h-10 mb-4 text-primary" />
-                <h4 className="text-lg font-bold mb-2">{action.title}</h4>
-                <p className="text-sm text-muted-foreground">{action.description}</p>
-              </Card>
-            ))}
+          {/* Subject Progress */}
+          <div>
+            <h3 className="text-xl font-bold mb-4">Subject Progress</h3>
+            <div className="max-w-3xl">
+              <SubjectProgress />
+            </div>
           </div>
-        </div>
 
-        {/* Analytics Dashboard */}
-        <div className="mb-12">
-          <h3 className="text-2xl font-bold mb-6">Learning Analytics</h3>
-          <div className="grid lg:grid-cols-2 gap-6 max-w-6xl">
-            <ActivityChart />
-            <QuizScoreTrendChart />
+          {/* Quiz Results */}
+          <div>
+            <h3 className="text-xl font-bold mb-4">Quiz Performance</h3>
+            <div className="max-w-3xl">
+              <QuizResults />
+            </div>
           </div>
-          <div className="mt-6 max-w-6xl">
-            <SubjectDistributionChart />
-          </div>
-        </div>
 
-        {/* Subject Progress */}
-        <div className="mb-12">
-          <h3 className="text-2xl font-bold mb-6">Subject Progress</h3>
-          <div className="max-w-4xl">
-            <SubjectProgress />
+          {/* Leaderboard and Friends */}
+          <div>
+            <div className="grid lg:grid-cols-2 gap-4 max-w-6xl">
+              <Leaderboard />
+              <FriendsManager />
+            </div>
           </div>
-        </div>
 
-        {/* Quiz Results */}
-        <div className="mb-12">
-          <h3 className="text-2xl font-bold mb-6">Quiz Performance</h3>
-          <div className="max-w-4xl">
-            <QuizResults />
+          {/* My Textbooks */}
+          <div>
+            <h3 className="text-xl font-bold mb-4">My Textbooks</h3>
+            <div className="max-w-3xl">
+              <TextbooksList key={refreshKey} />
+            </div>
           </div>
         </div>
-
-        {/* Leaderboard and Friends */}
-        <div className="mb-12">
-          <div className="grid lg:grid-cols-2 gap-6 max-w-6xl">
-            <Leaderboard />
-            <FriendsManager />
-          </div>
-        </div>
-
-        {/* My Textbooks */}
-        <div>
-          <h3 className="text-2xl font-bold mb-6">My Textbooks</h3>
-          <div className="max-w-4xl">
-            <TextbooksList key={refreshKey} />
-          </div>
-        </div>
-      </div>
+      </main>
 
       <UploadTextbookDialog 
         open={uploadDialogOpen}

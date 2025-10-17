@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Send, Sparkles, Users, BookOpen, ClipboardList, Loader2, Plus, Trash2, MessageSquare } from "lucide-react";
+import { Send, Sparkles, Users, BookOpen, ClipboardList, Loader2, Plus, Trash2, MessageSquare } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -13,6 +13,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { QuizDialog } from "@/components/QuizDialog";
 import { FeedbackDialog } from "@/components/FeedbackDialog";
+import { AppSidebar } from "@/components/AppSidebar";
 
 type Persona = "genz" | "personal" | "normal";
 
@@ -43,14 +44,11 @@ const Chat = () => {
       const state = location.state as { conversationId?: string; newChat?: boolean };
       
       if (state?.conversationId) {
-        // Load specific conversation
         setConversationId(state.conversationId);
         loadMessages(state.conversationId);
       } else if (state?.newChat) {
-        // Force create new conversation
         createNewConversation();
       } else {
-        // Default behavior: load most recent or create new
         initializeConversation();
       }
     }
@@ -96,7 +94,6 @@ const Chat = () => {
 
   const initializeConversation = async () => {
     try {
-      // Get subject ID
       const { data: subjectData } = await supabase
         .from('subjects')
         .select('id')
@@ -105,7 +102,6 @@ const Chat = () => {
 
       if (!subjectData) return;
 
-      // Create or get existing conversation
       const { data: existingConv } = await supabase
         .from('conversations')
         .select('id')
@@ -211,13 +207,8 @@ const Chat = () => {
         },
       });
 
-      if (error) {
-        throw error;
-      }
-
-      if (data?.error) {
-        throw new Error(data.error);
-      }
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       const aiResponse = {
         id: Date.now() + 1,
@@ -229,8 +220,6 @@ const Chat = () => {
       };
 
       setMessages(prev => [...prev, aiResponse]);
-      
-      // Reload messages to ensure sync
       await loadMessages(conversationId);
       
     } catch (error: any) {
@@ -240,8 +229,6 @@ const Chat = () => {
         description: error.message || "Failed to send message. Please try again.",
         variant: "destructive",
       });
-      
-      // Remove the user message if failed
       setMessages(messages);
       setMessage(currentMessage);
     } finally {
@@ -251,7 +238,6 @@ const Chat = () => {
 
   const handleNewChat = async () => {
     try {
-      // Get subject ID
       const { data: subjectData } = await supabase
         .from('subjects')
         .select('id')
@@ -260,7 +246,6 @@ const Chat = () => {
 
       if (!subjectData) return;
 
-      // Create new conversation
       const { data: newConv, error } = await supabase
         .from('conversations')
         .insert({
@@ -358,119 +343,113 @@ const Chat = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <div className="absolute inset-0 gradient-hero opacity-5 pointer-events-none" />
+    <div className="min-h-screen flex">
+      <AppSidebar />
       
-      {/* Header */}
-      <div className="container mx-auto px-4 py-4 border-b relative">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              onClick={() => navigate("/dashboard")}
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
+      <main className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="bg-card border-b border-border px-8 py-6">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold capitalize">{subject} Learning</h1>
-              <p className="text-sm text-muted-foreground">Choose your learning style below</p>
+              <h2 className="text-2xl font-bold capitalize">{subject} Learning</h2>
+              <p className="text-sm text-muted-foreground mt-1">Choose your learning style below</p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handleNewChat}
+                size="sm"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                New Chat
+              </Button>
+              {conversationId && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFeedbackDialogOpen(true)}
+                  >
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Feedback
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDeleteDialogOpen(true)}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </Button>
+                </>
+              )}
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={handleNewChat}
-              className="hover:scale-105 transition-smooth"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              New Chat
-            </Button>
-            {conversationId && (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => setFeedbackDialogOpen(true)}
-                  className="hover:scale-105 transition-smooth"
-                >
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  Feedback
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setDeleteDialogOpen(true)}
-                  className="hover:scale-105 transition-smooth text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete
-                </Button>
-              </>
-            )}
+        </div>
+
+        {/* Persona Selector */}
+        <div className="bg-muted/30 border-b border-border px-8 py-4">
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            {personas.map((persona) => (
+              <Button
+                key={persona.id}
+                variant={selectedPersona === persona.id ? "default" : "outline"}
+                size="sm"
+                className={`flex items-center gap-2 whitespace-nowrap transition-smooth ${
+                  selectedPersona === persona.id ? persona.color + " text-white" : ""
+                }`}
+                onClick={() => setSelectedPersona(persona.id)}
+              >
+                <persona.icon className="w-4 h-4" />
+                <div className="text-left">
+                  <div className="font-semibold text-sm">{persona.name}</div>
+                  <div className="text-xs opacity-80">{persona.description}</div>
+                </div>
+              </Button>
+            ))}
           </div>
         </div>
-      </div>
 
-      {/* Persona Selector */}
-      <div className="container mx-auto px-4 py-4 border-b relative">
-        <div className="flex gap-3 overflow-x-auto pb-2">
-          {personas.map((persona) => (
-            <Button
-              key={persona.id}
-              variant={selectedPersona === persona.id ? "default" : "outline"}
-              className={`flex items-center gap-2 whitespace-nowrap transition-smooth ${
-                selectedPersona === persona.id ? persona.color + " text-white" : ""
-              }`}
-              onClick={() => setSelectedPersona(persona.id)}
-            >
-              <persona.icon className="w-4 h-4" />
-              <div className="text-left">
-                <div className="font-semibold text-sm">{persona.name}</div>
-                <div className="text-xs opacity-80">{persona.description}</div>
-              </div>
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      {/* Chat Messages */}
-      <ScrollArea className="flex-1 container mx-auto px-4 relative">
-        <div className="py-6 space-y-4 max-w-4xl mx-auto">
-          {messages.length === 0 ? (
-            <Card className="p-12 text-center">
-              <div className="gradient-primary w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-elegant mx-auto">
-                <Sparkles className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold mb-4">Start Your Learning Journey</h3>
-              <p className="text-muted-foreground mb-6">
-                Ask me anything about {subject}! I'll explain it using your selected persona style.
-              </p>
-              <div className="grid gap-2 max-w-md mx-auto text-left">
-                <Button variant="outline" className="justify-start" onClick={() => setMessage("Teach me about the Cold War")}>
-                  "Teach me about the Cold War"
-                </Button>
-                <Button variant="outline" className="justify-start" onClick={() => setMessage("Explain Chapter 2 from my textbook")}>
-                  "Explain Chapter 2 from my textbook"
-                </Button>
-                <Button variant="outline" className="justify-start" onClick={() => setMessage("What are tectonic plates?")}>
-                  "What are tectonic plates?"
-                </Button>
-              </div>
-            </Card>
-          ) : (
-            messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex gap-3 ${msg.isUser ? "justify-end" : "justify-start"} animate-fade-in`}
-              >
-                {!msg.isUser && (
-                  <Avatar className="gradient-primary">
-                    <AvatarFallback className="bg-transparent text-white">AI</AvatarFallback>
-                  </Avatar>
-                 )}
+        {/* Chat Messages */}
+        <ScrollArea className="flex-1 px-8">
+          <div className="py-6 space-y-4 max-w-4xl mx-auto">
+            {messages.length === 0 ? (
+              <Card className="p-12 text-center">
+                <div className="gradient-primary w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-elegant mx-auto">
+                  <Sparkles className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold mb-4">Start Your Learning Journey</h3>
+                <p className="text-muted-foreground mb-6">
+                  Ask me anything about {subject}! I'll explain it using your selected persona style.
+                </p>
+                <div className="grid gap-2 max-w-md mx-auto text-left">
+                  <Button variant="outline" className="justify-start" onClick={() => setMessage("Teach me about the Cold War")}>
+                    "Teach me about the Cold War"
+                  </Button>
+                  <Button variant="outline" className="justify-start" onClick={() => setMessage("Explain Chapter 2 from my textbook")}>
+                    "Explain Chapter 2 from my textbook"
+                  </Button>
+                  <Button variant="outline" className="justify-start" onClick={() => setMessage("What are tectonic plates?")}>
+                    "What are tectonic plates?"
+                  </Button>
+                </div>
+              </Card>
+            ) : (
+              messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`flex gap-3 ${msg.isUser ? "justify-end" : "justify-start"} animate-fade-in`}
+                >
+                  {!msg.isUser && (
+                    <Avatar className="gradient-primary">
+                      <AvatarFallback className="bg-transparent text-white">AI</AvatarFallback>
+                    </Avatar>
+                  )}
                   <Card className={`p-4 max-w-2xl ${msg.isUser ? "gradient-primary text-white" : ""}`}>
                     {msg.isUser ? (
                       <p className="leading-relaxed">{msg.text}</p>
-                     ) : (
+                    ) : (
                       <div className="space-y-4">
                         {msg.images && msg.images.length > 0 && (
                           <div className={`grid gap-4 ${msg.images.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
@@ -492,29 +471,27 @@ const Chat = () => {
                       </div>
                     )}
                   </Card>
-                 {msg.isUser && (
-                  <Avatar>
-                    <AvatarFallback>{user?.user_metadata?.name?.[0] || "U"}</AvatarFallback>
-                  </Avatar>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-      </ScrollArea>
+                  {msg.isUser && (
+                    <Avatar>
+                      <AvatarFallback>{user?.user_metadata?.name?.[0] || "U"}</AvatarFallback>
+                    </Avatar>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </ScrollArea>
 
-      {/* Input Area */}
-      <div className="border-t bg-background/80 backdrop-blur-sm relative">
-        <div className="container mx-auto px-4 py-4">
+        {/* Input Area */}
+        <div className="border-t bg-card px-8 py-4">
           <div className="max-w-4xl mx-auto space-y-3">
-            {/* Take Test Button */}
             {messages.length > 0 && (
               <div className="flex justify-center">
                 <Button
                   variant="outline"
                   onClick={handleGenerateQuiz}
                   disabled={generatingQuiz}
-                  className="hover:scale-105 transition-smooth"
+                  size="sm"
                 >
                   {generatingQuiz ? (
                     <>
@@ -531,7 +508,6 @@ const Chat = () => {
               </div>
             )}
             
-            {/* Message Input */}
             <div className="flex gap-2">
               <Input
                 placeholder={`Ask about ${subject}...`}
@@ -555,9 +531,8 @@ const Chat = () => {
             </div>
           </div>
         </div>
-      </div>
+      </main>
 
-      {/* Quiz Dialog */}
       {currentQuizId && (
         <QuizDialog
           open={quizDialogOpen}
@@ -567,7 +542,6 @@ const Chat = () => {
         />
       )}
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -585,7 +559,6 @@ const Chat = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Feedback Dialog */}
       {conversationId && user && (
         <FeedbackDialog
           open={feedbackDialogOpen}
