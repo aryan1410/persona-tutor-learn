@@ -9,6 +9,7 @@ interface SubjectProgressData {
   subject_name: string;
   total_messages: number;
   topics_count: number;
+  progress_percentage: number;
   icon: any;
 }
 
@@ -37,21 +38,60 @@ export function SubjectProgress() {
       const progressData: SubjectProgressData[] = [];
       
       for (const subject of subjects) {
+        // Get user's textbook for this subject
+        const { data: textbook } = await supabase
+          .from('textbooks')
+          .select('content')
+          .eq('user_id', user.id)
+          .eq('subject_id', subject.id)
+          .maybeSingle();
+
+        // Get user progress
         const { data: userProgress } = await supabase
           .from('user_progress')
           .select('total_messages, topics_covered')
           .eq('user_id', user.id)
           .eq('subject_id', subject.id)
-          .single();
+          .maybeSingle();
 
         const topicsArray = userProgress?.topics_covered as any[] || [];
         const uniqueTopics = new Set(topicsArray.map(t => JSON.stringify(t))).size;
+
+        // Calculate progress based on textbook structure if available
+        let progressPercentage = 0;
+        if (textbook?.content) {
+          const content = textbook.content as any;
+          const chapters = content.chapters || [];
+          
+          let totalItems = 0;
+          let coveredItems = 0;
+
+          // Count total chapters and subtopics
+          chapters.forEach((chapter: any) => {
+            totalItems++; // Count chapter itself
+            if (chapter.subtopics && Array.isArray(chapter.subtopics)) {
+              totalItems += chapter.subtopics.length;
+            }
+          });
+
+          // Count covered items
+          topicsArray.forEach((topic: any) => {
+            if (topic.type === 'chapter') {
+              coveredItems++;
+            } else if (topic.type === 'subtopic') {
+              coveredItems++;
+            }
+          });
+
+          progressPercentage = totalItems > 0 ? Math.round((coveredItems / totalItems) * 100) : 0;
+        }
 
         progressData.push({
           subject_id: subject.id,
           subject_name: subject.name,
           total_messages: userProgress?.total_messages || 0,
           topics_count: uniqueTopics,
+          progress_percentage: progressPercentage,
           icon: subject.name.toLowerCase() === 'history' ? BookOpen : MapPin,
         });
       }
@@ -79,10 +119,6 @@ export function SubjectProgress() {
     <div className="space-y-4">
       {progress.map((subject) => {
         const Icon = subject.icon;
-        // Calculate progress percentage (arbitrary scale: 10 messages = 10%, 10 topics = 40%, max 50%)
-        const messageProgress = Math.min((subject.total_messages / 10) * 10, 10);
-        const topicProgress = Math.min((subject.topics_count / 10) * 40, 40);
-        const totalProgress = Math.min(messageProgress + topicProgress, 50);
 
         return (
           <Card key={subject.subject_id} className="p-6">
@@ -97,10 +133,10 @@ export function SubjectProgress() {
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold">{Math.round(totalProgress)}%</p>
+                <p className="text-2xl font-bold">{subject.progress_percentage}%</p>
               </div>
             </div>
-            <Progress value={totalProgress} className="h-2" />
+            <Progress value={subject.progress_percentage} className="h-2" />
           </Card>
         );
       })}
