@@ -15,6 +15,7 @@ import { QuizDialog } from "@/components/QuizDialog";
 import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { AppSidebar } from "@/components/AppSidebar";
 
+// Chat page component
 type Persona = "genz" | "personal" | "normal";
 
 const Chat = () => {
