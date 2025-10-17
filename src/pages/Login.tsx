@@ -62,7 +62,7 @@ const Login = () => {
         </Button>
 
         <div className="text-center mb-8 mt-8">
-          <h1 className="text-3xl font-bold gradient-primary text-transparent bg-clip-text mb-2">
+          <h1 className="text-3xl font-bold text-foreground mb-2">
             Welcome Back
           </h1>
           <p className="text-muted-foreground">Sign in to continue learning</p>
