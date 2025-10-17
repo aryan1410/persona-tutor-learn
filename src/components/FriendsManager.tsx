@@ -68,26 +68,37 @@ export function FriendsManager() {
         }
       }
 
-      // Load pending requests
-      const { data: pendingRequests } = await supabase
-        .from('friend_requests')
-        .select(`
-          id,
-          sender_id,
-          status,
-          sender:profiles!friend_requests_sender_id_fkey(name)
-        `)
-        .eq('receiver_id', user.id)
-        .eq('status', 'pending');
+      // Load pending requests - skip if table doesn't exist
+      try {
+        const { data: pendingRequests, error: requestsError } = await supabase
+          .from('friend_requests')
+          .select('id, sender_id, status')
+          .eq('receiver_id', user.id)
+          .eq('status', 'pending');
 
-      if (pendingRequests) {
-        setRequests(pendingRequests.map((r: any) => ({
-          id: r.id,
-          sender_id: r.sender_id,
-          sender_name: r.sender?.name || 'Unknown',
-          sender_email: '',
-          status: r.status,
-        })));
+        if (pendingRequests && !requestsError) {
+          // Get sender profiles separately
+          const senderIds = pendingRequests.map(r => r.sender_id);
+          if (senderIds.length > 0) {
+            const { data: senderProfiles } = await supabase
+              .from('profiles')
+              .select('id, name')
+              .in('id', senderIds);
+
+            const profileMap = new Map(senderProfiles?.map(p => [p.id, p.name]) || []);
+            
+            setRequests(pendingRequests.map((r: any) => ({
+              id: r.id,
+              sender_id: r.sender_id,
+              sender_name: profileMap.get(r.sender_id) || 'Unknown',
+              sender_email: '',
+              status: r.status,
+            })));
+          }
+        }
+      } catch (requestError) {
+        console.log('Friend requests feature not available:', requestError);
+        // Silently skip if friend_requests table doesn't exist
       }
     } catch (error) {
       console.error('Error loading friends:', error);
