@@ -146,7 +146,7 @@ Always use proper markdown formatting:
     if (subject === 'geography') {
       const lastUserMessage = messages[messages.length - 1]?.content || '';
       
-      // Use AI to analyze if it's a chapter or subtopic request
+      // Use AI to analyze if it's a chapter or subtopic request and what type of image is best
       const analysisResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -158,7 +158,7 @@ Always use proper markdown formatting:
           messages: [
             {
               role: 'system',
-              content: 'Analyze if the user is asking about a full chapter/broad topic or a specific subtopic. Respond with exactly "CHAPTER" if it\'s a broad topic covering multiple subtopics, or "SUBTOPIC" if it\'s a specific focused concept. Examples: "teach me about climate" = CHAPTER, "explain monsoons" = SUBTOPIC, "tell me about Asia" = CHAPTER, "what are tectonic plates" = SUBTOPIC'
+              content: 'Analyze the geography query and respond with: 1) CHAPTER or SUBTOPIC (CHAPTER = broad topic, SUBTOPIC = specific concept), 2) PHOTO or DIAGRAM (PHOTO = can be shown with real-world photography, DIAGRAM = needs illustration/map). Format: "CHAPTER|PHOTO" or "SUBTOPIC|DIAGRAM". Examples: "teach me about climate" = "CHAPTER|DIAGRAM", "show me the Himalayas" = "SUBTOPIC|PHOTO", "explain monsoons" = "SUBTOPIC|DIAGRAM", "rivers of India" = "CHAPTER|PHOTO"'
             },
             {
               role: 'user',
@@ -169,19 +169,35 @@ Always use proper markdown formatting:
       });
 
       let numImages = 1;
+      let useRealisticPhotos = false;
+      
       if (analysisResponse.ok) {
         const analysisData = await analysisResponse.json();
-        const analysis = analysisData.choices?.[0]?.message?.content?.trim().toUpperCase();
-        numImages = analysis === 'CHAPTER' ? 2 : 1;
-        console.log('Topic analysis:', analysis, '- generating', numImages, 'images');
+        const analysis = (analysisData.choices?.[0]?.message?.content?.trim() || '').toUpperCase();
+        const [topicType, imageType] = analysis.split('|');
+        
+        numImages = topicType === 'CHAPTER' ? 2 : 1;
+        useRealisticPhotos = imageType === 'PHOTO';
+        
+        console.log('Topic analysis:', topicType, '- Image type:', imageType, '- generating', numImages, 'images');
       }
 
-      // Generate images based on the topic
+      // Generate images with appropriate style
       const imagePromises = [];
       for (let i = 0; i < numImages; i++) {
-        const imagePrompt = numImages === 2 
-          ? `Create a clear, educational geography diagram or map related to aspect ${i + 1} of: ${lastUserMessage}. Make it detailed and informative.`
-          : `Create a clear, educational geography diagram or map for: ${lastUserMessage}. Make it detailed and informative.`;
+        let imagePrompt;
+        
+        if (useRealisticPhotos) {
+          // Request realistic, photographic images
+          imagePrompt = numImages === 2 
+            ? `Ultra high quality, realistic photograph showing aspect ${i + 1} of ${lastUserMessage}. Professional nature/travel photography style, high detail, photorealistic.`
+            : `Ultra high quality, realistic photograph of ${lastUserMessage}. Professional nature/travel photography style, high detail, photorealistic, looks like a real photograph.`;
+        } else {
+          // Request educational diagrams/maps
+          imagePrompt = numImages === 2 
+            ? `Clear, educational geography diagram or map for aspect ${i + 1} of: ${lastUserMessage}. Detailed, informative, suitable for learning.`
+            : `Clear, educational geography diagram or map for: ${lastUserMessage}. Detailed, informative, suitable for learning.`;
+        }
         
         imagePromises.push(
           fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -212,7 +228,7 @@ Always use proper markdown formatting:
         }
       }
       
-      console.log('Generated', generatedImages.length, 'images for geography');
+      console.log('Generated', generatedImages.length, useRealisticPhotos ? 'photographic' : 'diagram', 'images for geography');
     }
 
     // Call Lovable AI for text response
