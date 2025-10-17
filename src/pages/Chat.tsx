@@ -4,10 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Send, Sparkles, Users, BookOpen } from "lucide-react";
+import { ArrowLeft, Send, Sparkles, Users, BookOpen, ClipboardList, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { QuizDialog } from "@/components/QuizDialog";
 
 type Persona = "genz" | "personal" | "normal";
 
@@ -21,6 +24,10 @@ const Chat = () => {
   const [selectedPersona, setSelectedPersona] = useState<Persona>("genz");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [generatingQuiz, setGeneratingQuiz] = useState(false);
+  const [quizDialogOpen, setQuizDialogOpen] = useState(false);
+  const [currentQuizId, setCurrentQuizId] = useState<string | null>(null);
+  const [quizRefreshKey, setQuizRefreshKey] = useState(0);
 
   useEffect(() => {
     checkUser();
@@ -205,6 +212,43 @@ const Chat = () => {
     }
   };
 
+  const handleGenerateQuiz = async () => {
+    if (!conversationId || messages.length === 0) {
+      toast({
+        title: "No conversation",
+        description: "Chat with the AI first before generating a quiz",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setGeneratingQuiz(true);
+      const { data, error } = await supabase.functions.invoke('generate-quiz', {
+        body: { conversationId, userId: user?.id }
+      });
+
+      if (error) throw error;
+
+      setCurrentQuizId(data.quizId);
+      setQuizDialogOpen(true);
+      
+      toast({
+        title: "Quiz Ready!",
+        description: `${data.totalQuestions} questions generated based on your conversation`,
+      });
+    } catch (error) {
+      console.error('Error generating quiz:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate quiz. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingQuiz(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <div className="absolute inset-0 gradient-hero opacity-5 pointer-events-none" />
@@ -284,11 +328,19 @@ const Chat = () => {
                   <Avatar className="gradient-primary">
                     <AvatarFallback className="bg-transparent text-white">AI</AvatarFallback>
                   </Avatar>
-                )}
-                <Card className={`p-4 max-w-2xl ${msg.isUser ? "gradient-primary text-white" : ""}`}>
-                  <p className="leading-relaxed">{msg.text}</p>
-                </Card>
-                {msg.isUser && (
+                 )}
+                 <Card className={`p-4 max-w-2xl ${msg.isUser ? "gradient-primary text-white" : ""}`}>
+                   {msg.isUser ? (
+                     <p className="leading-relaxed">{msg.text}</p>
+                   ) : (
+                     <div className="prose prose-sm max-w-none dark:prose-invert">
+                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                         {msg.text}
+                       </ReactMarkdown>
+                     </div>
+                   )}
+                 </Card>
+                 {msg.isUser && (
                   <Avatar>
                     <AvatarFallback>{user?.user_metadata?.name?.[0] || "U"}</AvatarFallback>
                   </Avatar>
@@ -302,29 +354,66 @@ const Chat = () => {
       {/* Input Area */}
       <div className="border-t bg-background/80 backdrop-blur-sm relative">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex gap-2 max-w-4xl mx-auto">
-            <Input
-              placeholder={`Ask about ${subject}...`}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && !loading && handleSendMessage()}
-              className="flex-1"
-              disabled={loading}
-            />
-            <Button
-              className="gradient-primary text-white hover:opacity-90 transition-smooth"
-              onClick={handleSendMessage}
-              disabled={loading}
-            >
-              {loading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
-            </Button>
+          <div className="max-w-4xl mx-auto space-y-3">
+            {/* Take Test Button */}
+            {messages.length > 0 && (
+              <div className="flex justify-center">
+                <Button
+                  variant="outline"
+                  onClick={handleGenerateQuiz}
+                  disabled={generatingQuiz}
+                  className="hover:scale-105 transition-smooth"
+                >
+                  {generatingQuiz ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Generating Quiz...
+                    </>
+                  ) : (
+                    <>
+                      <ClipboardList className="w-4 h-4 mr-2" />
+                      Take Test
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+            
+            {/* Message Input */}
+            <div className="flex gap-2">
+              <Input
+                placeholder={`Ask about ${subject}...`}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && !loading && handleSendMessage()}
+                className="flex-1"
+                disabled={loading}
+              />
+              <Button
+                className="gradient-primary text-white hover:opacity-90 transition-smooth"
+                onClick={handleSendMessage}
+                disabled={loading}
+              >
+                {loading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Quiz Dialog */}
+      {currentQuizId && (
+        <QuizDialog
+          open={quizDialogOpen}
+          onOpenChange={setQuizDialogOpen}
+          quizId={currentQuizId}
+          onComplete={() => setQuizRefreshKey(prev => prev + 1)}
+        />
+      )}
     </div>
   );
 };

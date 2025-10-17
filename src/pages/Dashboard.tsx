@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { BookOpen, MapPin, LogOut, Upload, Trophy, BarChart } from "lucide-react";
+import { BookOpen, MapPin, LogOut, Upload } from "lucide-react";
 import { UploadTextbookDialog } from "@/components/UploadTextbookDialog";
 import { TextbooksList } from "@/components/TextbooksList";
+import { QuizResults } from "@/components/QuizResults";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -68,18 +69,6 @@ const Dashboard = () => {
       icon: Upload,
       description: "Add new study materials",
       action: () => setUploadDialogOpen(true),
-    },
-    {
-      title: "View Progress",
-      icon: BarChart,
-      description: "Track your learning journey",
-      action: () => {},
-    },
-    {
-      title: "Leaderboard",
-      icon: Trophy,
-      description: "Compete with friends",
-      action: () => {},
     },
   ];
 
@@ -152,7 +141,7 @@ const Dashboard = () => {
         {/* Quick Actions */}
         <div className="mb-12">
           <h3 className="text-2xl font-bold mb-6">Quick Actions</h3>
-          <div className="grid md:grid-cols-3 gap-6 max-w-4xl">
+          <div className="grid md:grid-cols-1 gap-6 max-w-4xl">
             {quickActions.map((action, index) => (
               <Card
                 key={index}
@@ -165,6 +154,14 @@ const Dashboard = () => {
                 <p className="text-sm text-muted-foreground">{action.description}</p>
               </Card>
             ))}
+          </div>
+        </div>
+
+        {/* Quiz Results */}
+        <div className="mb-12">
+          <h3 className="text-2xl font-bold mb-6">Your Progress</h3>
+          <div className="max-w-4xl">
+            <QuizResults />
           </div>
         </div>
 

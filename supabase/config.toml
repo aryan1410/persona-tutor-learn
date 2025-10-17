@@ -5,3 +5,6 @@ verify_jwt = true
 
 [functions.process-textbook]
 verify_jwt = true
+
+[functions.generate-quiz]
+verify_jwt = true
