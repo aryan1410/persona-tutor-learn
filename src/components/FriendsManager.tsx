@@ -8,6 +8,7 @@ import { UserPlus, Users, Check, X, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -171,6 +172,9 @@ export function FriendsManager() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add Friend</DialogTitle>
+              <DialogDescription>
+                Send a friend request to compete on the leaderboard together.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div>

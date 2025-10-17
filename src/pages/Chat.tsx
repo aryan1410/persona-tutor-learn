@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Send, Sparkles, Users, BookOpen, ClipboardList, Loader2 } from "lucide-react";
+import { ArrowLeft, Send, Sparkles, Users, BookOpen, ClipboardList, Loader2, Plus } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
@@ -212,6 +212,48 @@ const Chat = () => {
     }
   };
 
+  const handleNewChat = async () => {
+    try {
+      // Get subject ID
+      const { data: subjectData } = await supabase
+        .from('subjects')
+        .select('id')
+        .eq('name', subject)
+        .single();
+
+      if (!subjectData) return;
+
+      // Create new conversation
+      const { data: newConv, error } = await supabase
+        .from('conversations')
+        .insert({
+          user_id: user.id,
+          subject_id: subjectData.id,
+          title: `${subject} learning session`,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (newConv) {
+        setConversationId(newConv.id);
+        setMessages([]);
+        toast({
+          title: "New chat started",
+          description: "Ready for a fresh conversation!",
+        });
+      }
+    } catch (error) {
+      console.error('Error creating new conversation:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start new chat",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleGenerateQuiz = async () => {
     if (!conversationId || messages.length === 0) {
       toast({
@@ -269,6 +311,14 @@ const Chat = () => {
               <p className="text-sm text-muted-foreground">Choose your learning style below</p>
             </div>
           </div>
+          <Button
+            variant="outline"
+            onClick={handleNewChat}
+            className="hover:scale-105 transition-smooth"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            New Chat
+          </Button>
         </div>
       </div>
 
