@@ -18,20 +18,29 @@ export function AppSidebar() {
   const handleDeleteAccount = async () => {
     if (window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          // Delete user data from profiles table
-          await supabase.from("profiles").delete().eq("id", user.id);
-          
-          toast({
-            title: "Account deleted successfully",
-            description: "Your account and all associated data have been removed.",
-          });
-          
-          await supabase.auth.signOut();
-          navigate("/");
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          throw new Error("No active session");
         }
+
+        // Call the edge function to delete the account
+        const { error } = await supabase.functions.invoke("delete-account", {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (error) throw error;
+
+        toast({
+          title: "Account deleted successfully",
+          description: "Your account and all associated data have been removed.",
+        });
+        
+        await supabase.auth.signOut();
+        navigate("/");
       } catch (error) {
+        console.error("Delete account error:", error);
         toast({
           title: "Error deleting account",
           description: "Please try again or contact support.",
