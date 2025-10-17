@@ -132,8 +132,6 @@ Always use proper markdown formatting:
 - Use numbered lists for sequential steps`;
     }
 
-    systemPrompt += `\n\nFor Geography topics, you can describe visual elements but do not generate images yourself. Focus on clear explanations.`;
-    
     // Add textbook context if available
     if (textbookContext) {
       systemPrompt += textbookContext;
@@ -142,7 +140,45 @@ Always use proper markdown formatting:
 
     console.log('System prompt ready');
 
-    // Call Lovable AI
+    // Detect if the user is asking for an image/map/diagram
+    const lastUserMessage = messages[messages.length - 1]?.content.toLowerCase() || '';
+    const imageKeywords = ['show me', 'draw', 'map of', 'diagram', 'picture', 'image', 'visualize', 'illustrate'];
+    const shouldGenerateImage = imageKeywords.some(keyword => lastUserMessage.includes(keyword));
+
+    let generatedImage = null;
+    
+    if (shouldGenerateImage && subject === 'geography') {
+      console.log('Generating image for:', lastUserMessage);
+      
+      // Generate image using Lovable AI
+      const imageResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash-image-preview',
+          messages: [
+            {
+              role: 'user',
+              content: `Create a clear, educational geography ${lastUserMessage.includes('map') ? 'map' : 'diagram'} for: ${lastUserMessage}. Make it detailed and informative.`
+            }
+          ],
+          modalities: ['image', 'text']
+        }),
+      });
+
+      if (imageResponse.ok) {
+        const imageData = await imageResponse.json();
+        generatedImage = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+        console.log('Image generated successfully');
+      } else {
+        console.error('Image generation failed:', imageResponse.status);
+      }
+    }
+
+    // Call Lovable AI for text response
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -195,12 +231,13 @@ Always use proper markdown formatting:
         content: messages[messages.length - 1].content,
       });
 
-      // Save assistant message
+      // Save assistant message with optional image
       await supabase.from('messages').insert({
         conversation_id: conversationId,
         role: 'assistant',
         content: aiMessage,
         persona: persona,
+        images: generatedImage ? [generatedImage] : null,
       });
 
       // Update conversation timestamp
@@ -227,7 +264,10 @@ Always use proper markdown formatting:
     }
 
     return new Response(
-      JSON.stringify({ message: aiMessage }),
+      JSON.stringify({ 
+        message: aiMessage,
+        image: generatedImage 
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

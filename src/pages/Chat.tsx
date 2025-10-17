@@ -107,6 +107,7 @@ const Chat = () => {
           isUser: msg.role === 'user',
           timestamp: new Date(msg.created_at),
           persona: msg.persona,
+          image: msg.images?.[0],
         })));
       }
     } catch (error) {
@@ -154,6 +155,7 @@ const Chat = () => {
       text: message,
       isUser: true,
       timestamp: new Date(),
+      image: null,
     };
 
     setMessages([...messages, userMessage]);
@@ -189,6 +191,7 @@ const Chat = () => {
         isUser: false,
         timestamp: new Date(),
         persona: selectedPersona,
+        image: data.image || null,
       };
 
       setMessages(prev => [...prev, aiResponse]);
@@ -379,17 +382,26 @@ const Chat = () => {
                     <AvatarFallback className="bg-transparent text-white">AI</AvatarFallback>
                   </Avatar>
                  )}
-                 <Card className={`p-4 max-w-2xl ${msg.isUser ? "gradient-primary text-white" : ""}`}>
-                   {msg.isUser ? (
-                     <p className="leading-relaxed">{msg.text}</p>
-                   ) : (
-                     <div className="prose prose-sm max-w-none dark:prose-invert">
-                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                         {msg.text}
-                       </ReactMarkdown>
-                     </div>
-                   )}
-                 </Card>
+                  <Card className={`p-4 max-w-2xl ${msg.isUser ? "gradient-primary text-white" : ""}`}>
+                    {msg.isUser ? (
+                      <p className="leading-relaxed">{msg.text}</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {msg.image && (
+                          <img 
+                            src={msg.image} 
+                            alt="Generated visualization" 
+                            className="rounded-lg w-full max-w-xl"
+                          />
+                        )}
+                        <div className="prose prose-sm max-w-none dark:prose-invert">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {msg.text}
+                          </ReactMarkdown>
+                        </div>
+                      </div>
+                    )}
+                  </Card>
                  {msg.isUser && (
                   <Avatar>
                     <AvatarFallback>{user?.user_metadata?.name?.[0] || "U"}</AvatarFallback>
