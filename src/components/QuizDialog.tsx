@@ -33,6 +33,8 @@ export function QuizDialog({ open, onOpenChange, quizId, onComplete }: QuizDialo
   const [submitting, setSubmitting] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [score, setScore] = useState(0);
+  const [reviewMode, setReviewMode] = useState(false);
+  const [reviewAnswers, setReviewAnswers] = useState<QuizQuestion[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -134,6 +136,20 @@ export function QuizDialog({ open, onOpenChange, quizId, onComplete }: QuizDialo
         })
         .eq('id', quizId);
 
+      // Reload questions with answers for review
+      const { data: reviewData } = await supabase
+        .from('quiz_questions')
+        .select('*')
+        .eq('quiz_id', quizId)
+        .order('created_at');
+
+      if (reviewData) {
+        setReviewAnswers(reviewData.map(q => ({
+          ...q,
+          options: q.options as unknown as string[]
+        })));
+      }
+
       setScore(correctCount);
       setCompleted(true);
 
@@ -170,7 +186,7 @@ export function QuizDialog({ open, onOpenChange, quizId, onComplete }: QuizDialo
     );
   }
 
-  if (completed) {
+  if (completed && !reviewMode) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md">
@@ -193,7 +209,90 @@ export function QuizDialog({ open, onOpenChange, quizId, onComplete }: QuizDialo
                 ? "Great job! You've mastered this topic!" 
                 : "Keep studying! Review the material and try again."}
             </p>
-            <Button onClick={() => onOpenChange(false)}>Close</Button>
+            <div className="flex gap-3 justify-center">
+              <Button variant="outline" onClick={() => setReviewMode(true)}>
+                Review Answers
+              </Button>
+              <Button onClick={() => onOpenChange(false)}>Close</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  if (reviewMode && reviewAnswers.length > 0) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Answer Review</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {reviewAnswers.map((question, idx) => {
+              const isCorrect = question.is_correct;
+              return (
+                <Card key={question.id} className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-1">
+                      {isCorrect ? (
+                        <CheckCircle2 className="w-5 h-5 text-green-500" />
+                      ) : (
+                        <XCircle className="w-5 h-5 text-red-500" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold mb-3">
+                        Question {idx + 1}: {question.question}
+                      </h4>
+                      <div className="space-y-2">
+                        {question.options.map((option, optIdx) => {
+                          const optionLetter = String.fromCharCode(65 + optIdx);
+                          const isUserAnswer = question.user_answer === optionLetter;
+                          const isCorrectAnswer = question.correct_answer === optionLetter;
+                          
+                          return (
+                            <div
+                              key={optIdx}
+                              className={`p-3 rounded-lg border ${
+                                isCorrectAnswer
+                                  ? 'bg-green-50 border-green-500 dark:bg-green-950/20'
+                                  : isUserAnswer && !isCorrect
+                                  ? 'bg-red-50 border-red-500 dark:bg-red-950/20'
+                                  : 'border-border'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{optionLetter}.</span>
+                                <span>{option}</span>
+                                {isCorrectAnswer && (
+                                  <span className="ml-auto text-sm text-green-600 dark:text-green-400 font-medium">
+                                    ✓ Correct Answer
+                                  </span>
+                                )}
+                                {isUserAnswer && !isCorrect && (
+                                  <span className="ml-auto text-sm text-red-600 dark:text-red-400 font-medium">
+                                    Your Answer
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+            <div className="flex justify-center pt-4">
+              <Button onClick={() => {
+                setReviewMode(false);
+                onOpenChange(false);
+              }}>
+                Close Review
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

@@ -7,6 +7,9 @@ import { BookOpen, MapPin, LogOut, Upload } from "lucide-react";
 import { UploadTextbookDialog } from "@/components/UploadTextbookDialog";
 import { TextbooksList } from "@/components/TextbooksList";
 import { QuizResults } from "@/components/QuizResults";
+import { SubjectProgress } from "@/components/SubjectProgress";
+import { Leaderboard } from "@/components/Leaderboard";
+import { FriendsManager } from "@/components/FriendsManager";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -157,11 +160,27 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* Subject Progress */}
+        <div className="mb-12">
+          <h3 className="text-2xl font-bold mb-6">Subject Progress</h3>
+          <div className="max-w-4xl">
+            <SubjectProgress />
+          </div>
+        </div>
+
         {/* Quiz Results */}
         <div className="mb-12">
-          <h3 className="text-2xl font-bold mb-6">Your Progress</h3>
+          <h3 className="text-2xl font-bold mb-6">Quiz Performance</h3>
           <div className="max-w-4xl">
             <QuizResults />
+          </div>
+        </div>
+
+        {/* Leaderboard and Friends */}
+        <div className="mb-12">
+          <div className="grid lg:grid-cols-2 gap-6 max-w-6xl">
+            <Leaderboard />
+            <FriendsManager />
           </div>
         </div>
 

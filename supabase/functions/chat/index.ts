@@ -208,6 +208,22 @@ Always use proper markdown formatting:
         .from('conversations')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', conversationId);
+
+      // Track user activity for leaderboard
+      const { data: conversation } = await supabase
+        .from('conversations')
+        .select('subject_id')
+        .eq('id', conversationId)
+        .single();
+
+      if (conversation) {
+        await supabase.from('user_activity').insert({
+          user_id: userId,
+          subject_id: conversation.subject_id,
+          activity_type: 'message',
+          points: 1,
+        });
+      }
     }
 
     return new Response(
