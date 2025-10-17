@@ -43,7 +43,7 @@ export function AppSidebar() {
 
   const navItems = [
     { title: "Dashboard", url: "/dashboard", icon: Home },
-    { title: "Profile", url: "/profile", icon: User },
+    { title: "Edit Profile", url: "/profile", icon: User },
     { title: "Billing Information", url: "/billing", icon: CreditCard },
   ];
 
